@@ -24,7 +24,7 @@ setup(
     version='0.0.1',
     url='https://github.com/insilichem/talaia',
     author='Mercè Alemany',
-    author_email='merce.alemany@e-campus.uab.cat',
+    author_email='malemanychavarria@gmail.com',
     description="Simplistic 3D dictionary of amino acids using geometric shapes",
     long_description=long_description,
     packages=find_packages(),

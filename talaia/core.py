@@ -296,6 +296,7 @@ def enable(selection=None, transparency=0):
         nearRes = chimera.specifier.evalSpec(selection).residues()
     else:  # we assume it is a list of residues
         nearRes = selection
+    complete_residues(nearRes)
     for res in nearRes:
         res_info = AMINOACIDS.get(res.type)
         if res_info is None:
