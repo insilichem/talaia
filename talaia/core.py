@@ -12,6 +12,7 @@ for UCSF Chimera.
 
 from textwrap import dedent
 import math
+import numpy
 import argparse
 from collections import defaultdict
 
@@ -25,7 +26,7 @@ import numpy as np
 import chimera
 from Bld2VRML import openFileObject as openBildFileObject
 from chimera import runCommand as run, cross, Point, Vector, preferences
-from chimera import selection, specifier
+from chimera import selection, specifier, Xform
 from Shape import shapecmd
 import Matrix as M
 
@@ -36,7 +37,7 @@ AMINOACIDS = {
         figure="sphere",
         size=0.9,
         color1=(0, 1, 0),
-        all_atoms=["N", "O", "CA", "C"],
+        all_atoms=["N", "CA", "O", "C"],
         center="CA",
     ),
     "ALA": dict(
@@ -156,7 +157,7 @@ AMINOACIDS = {
         color1="orange",
         color2="blue",
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "OD1", "ND2"],
-        k="CB",
+        k="CA",
         n="CG",
         p="OD1",
         u="ND2",
@@ -168,7 +169,7 @@ AMINOACIDS = {
         color1="orange",
         color2="blue",
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "CD", "OE1", "NE2"],
-        k="CA",
+        k="CB",
         n="CD",
         p="OE1",
         u="NE2",
@@ -274,6 +275,8 @@ ALTERNATIVE_NAME = {"CYX": "CYS", "HIE": "HIS", "HE1": "HIS", "CS1": "CYS"}
 
 IONS_AND_METALS = ["MG", "NI", "PT1", "K", "CA", "NA", "F"]
 
+all_refreshing = []
+
 
 def enable(selection=None, transparency=0):
     """
@@ -286,6 +289,7 @@ def enable(selection=None, transparency=0):
         Chimera specification query or list of residues
     transparency: float
     """
+
     if selection is None:
         nearRes = (
             chimera.specifier.evalSpec("ligand zr < 8").residues()
@@ -357,8 +361,24 @@ def enable(selection=None, transparency=0):
                 pentagon(center, n, p, k, r1, color1, rt, name, tp)
             elif shape == "hexagon":
                 hexagon(center, n, p, k, u, r1, color1, name, tp)
+            
+            opened = chimera.openModels.list()
+            key = 'refreshing_' + str(res.id)
+            key = dict(
+                residue=res,
+                name=name,
+                shape=shape,
+                model=opened[len(opened)-1],
+                frames=dict(ref_center=detect_type(res, name)[0],
+                            ref_points=detect_type(res, name)[1],
+                            vec2=None)
+            )
+
+            all_refreshing.append(key)
 
     subscribe_events()
+    return all_refreshing
+
 
 
 def disable():
@@ -380,10 +400,14 @@ def disable():
                     del r._depicted
 
     unsubscribe_events()
+    for d in all_refreshing:
+        d.clear()
+    all_refreshing[:] = []
+
 
 
 def subscribe_events():
-    chimera._depicter_handler = chimera.triggers.addHandler("Molecule", callback, None)
+    chimera._depicter_handler = chimera.triggers.addHandler("Molecule", callback, all_refreshing)
 
 
 def unsubscribe_events():
@@ -407,9 +431,326 @@ def callback(name, data, changes):
             deleted_mols,
         ]
     ):
-        disable()
-        if options:
-            enable(**options)
+        for i in range(len(all_refreshing)):
+            ref_points = all_refreshing[i]['frames'].get('ref_points')
+            ref_center = all_refreshing[i]['frames'].get('ref_center')
+            return_coord, s2_points = detect_type(all_refreshing[i].get('residue'),all_refreshing[i].get('name'))
+
+            refresh(all_refreshing[i]['shape'], ref_center, return_coord, ref_points, 
+                    s2_points, all_refreshing[i].get('model'))
+
+
+
+def Zmatrix(origin_coord):
+    ZERO = Point(0,0,0)
+    get_zero = ZERO - origin_coord
+    zero_matrix = Xform.translation(get_zero)
+    return zero_matrix
+
+
+
+def Tmatrix(return_coord):
+    ZERO = Point(0,0,0)
+    get_back = return_coord - ZERO
+    translation_matrix = Xform.translation(get_back)
+    return translation_matrix
+
+
+
+def Rmatrix(vec1, vec2):
+    vec1.normalize()
+    vec2.normalize()
+    near_zero = 1e-15
+    if chimera.cross(vec1, vec2) == chimera.Vector(0,0,0):
+        MI = ((1,0,0,0),(0,1,0,0),(0,0,1,0))
+        return M.chimera_xform(MI)
+    else: 
+        #print(vec1)
+        #print(vec2)
+        rot_vec = chimera.cross(vec1, vec2)
+        theta = chimera.angle(vec1, vec2)
+        rotation_matrix = Xform.rotation(rot_vec, theta)
+        return rotation_matrix
+    
+
+
+def refresh(shape, origin_coord, return_coord, ref_points, s2_points, model):
+    
+    if shape == 'sphere':
+        xform = sphere_transform(origin_coord, return_coord)
+    else:
+        xform = transform(origin_coord, return_coord, ref_points, s2_points)
+    
+    mol = chimera.openModels.list()[0]
+    curxform = mol.openState.xform
+    XF = M.xform_matrix(xform)
+    CX = M.xform_matrix(curxform)
+    mlist = [CX, XF]
+    to_apply = M.chimera_xform(M.multiply_matrices(*mlist))
+    model.openState.xform = to_apply
+
+
+
+
+def key_coords(res, a1, a2=None, a3=None):
+	if a2:
+		if a3:
+			for at in res.atoms:
+				if at.name == a1:
+					atom1 = at.coord()
+				elif at.name == a2:
+					atom2 = at.coord()
+				elif at.name == a3:
+					atom3 = at.coord()
+			return atom1, atom2, atom3
+		else:
+			for at in res.atoms:
+				if at.name == a1:
+					atom1 = at.coord()
+				elif at.name == a2:
+					atom2 = at.coord()
+			return atom1, atom2
+	else:
+		for at in res.atoms:
+			if at.name == a1:
+				atom1 = at.coord()
+		return atom1
+
+
+
+
+def detect_non_standard(res):
+    atom_map = res.atomsMap.keys()
+    for item in AMINOACIDS:
+        calls = {}
+        if compare_all_atoms(AMINOACIDS[i], atom_map, calls):
+            return res, item
+
+
+
+def compare_all_atoms(pattern, text, calls):
+    text = convert_unicode_to_string(remove_hydrogens(text))
+    key = str(pattern) + ':' + str(text)
+    if key in calls:
+        return calls[key]
+    if len(pattern) == 0:
+        return len(text)
+    elif len(text) == 0:
+        return len(pattern)
+    else:
+        if pattern[0] == text[0]:
+            m_cost = compare_all_atoms(pattern[1:], text[1:], calls)
+        else:
+            m_cost = compare_all_atoms(pattern[1:], text[1:], calls) + 1
+        i_cost = compare_all_atoms(pattern[:], text[1:], calls) + 1
+        d_cost = compare_all_atoms(pattern[1:], text[:], calls)
+        minimum = min(m_cost, i_cost, d_cost)
+        calls[str(pattern) + ':' + str(text)] = minimum
+        return minimum
+
+
+
+def convert_unicode_to_string(map_list):
+    new_list = []
+    for i in map_list:
+        j = str(i)
+        new_list.append(j)
+    return new_list
+
+
+
+def remove_hydrogens(atom_list):
+    no_hydrogen = []
+    for i in atom_list:
+        if i.startswith('H'):
+            pass
+        else:
+            no_hydrogen.append(i)
+        
+    return no_hydrogen
+
+
+
+def detect_type(res, res_name):
+    """
+    """
+    if res_name == 'GLY' or res_name == 'ALA':
+        center = key_coords(res, AMINOACIDS['GLY']['center'])
+        return center, [center]
+    elif res_name == 'VAL':
+        k, n = key_coords(res, AMINOACIDS['VAL']['k'], AMINOACIDS['VAL']['n'])
+        center = k + ((n - k) / 2)
+        return center, [center, n, k]
+    elif res_name == 'LEU':
+        k, n = key_coords(res, AMINOACIDS['LEU']['k'], AMINOACIDS['LEU']['n'])
+        center = k + ((n - k) / 2)
+        return center, [center, n, k]
+    elif res_name == 'ILE':
+        k, n = key_coords(res, AMINOACIDS['ILE']['k'], AMINOACIDS['ILE']['n'])
+        center = k + ((n - k) / 2)
+        return center, [center, n, k]
+    elif res_name == 'MET':
+        k, n = key_coords(res, AMINOACIDS['MET']['k'], AMINOACIDS['MET']['n'])
+        center = k + ((n - k) / 2)
+        return center, [center, center, n]
+    elif res_name == 'SER':
+        center, n = key_coords(res, AMINOACIDS['SER']['n'], AMINOACIDS['SER']['center'])
+        return center, [center, center, n]
+    elif res_name == 'THR':
+        center, n = key_coords(res, AMINOACIDS['THR']['n'], AMINOACIDS['THR']['center'])
+        return center, [center, center, n]
+    elif res_name == 'CYS':
+        center, n = key_coords(res, AMINOACIDS['CYS']['n'], AMINOACIDS['CYS']['center'])
+        return center, [center, center, n]
+    elif res_name == 'ASP':
+        n, k = key_coords(res, AMINOACIDS['ASP']['n'], AMINOACIDS['ASP']['k'])
+        p, u = key_coords(res, AMINOACIDS['ASP']['p'], AMINOACIDS['ASP']['u'])
+        s2_points = calculate_triangle_vertex(n, k, p, u)
+        return s2_points[0], s2_points
+    elif res_name == 'ASN':
+        n, k = key_coords(res, AMINOACIDS['ASN']['n'], AMINOACIDS['ASN']['k'])
+        p, u = key_coords(res, AMINOACIDS['ASN']['p'], AMINOACIDS['ASN']['u'])
+        s2_points = calculate_triangle_vertex(n, k, p, u)
+        return s2_points[0], s2_points
+    elif res_name == 'GLU':
+        n, k = key_coords(res, AMINOACIDS['GLU']['n'], AMINOACIDS['GLU']['k'])
+        p, u = key_coords(res, AMINOACIDS['GLU']['p'], AMINOACIDS['GLU']['u'])
+        s2_points = calculate_triangle_vertex(n, k, p, u)
+        return s2_points[0], s2_points
+    elif res_name == 'GLN':
+        n, k = key_coords(res, AMINOACIDS['GLN']['n'], AMINOACIDS['GLN']['k'])
+        p, u = key_coords(res, AMINOACIDS['GLN']['p'], AMINOACIDS['GLN']['u'])
+        s2_points = calculate_triangle_vertex(n, k, p, u)
+        return s2_points[0], s2_points
+    elif res_name == 'ARG':
+        center, n = key_coords(res, AMINOACIDS['ARG']['center'], AMINOACIDS['ARG']['n'])
+        p, k = key_coords(res, AMINOACIDS['ARG']['p'], AMINOACIDS['ARG']['k'])
+        return center, [center, n, p, center, k]
+    elif res_name == 'LYS':
+        center, n, k = key_coords(res, AMINOACIDS['LYS']['center'], AMINOACIDS['LYS']['n'],
+                                AMINOACIDS['LYS']['k'])
+        return center, [center, n, k]
+    elif res_name == 'TRP':
+        center, k, n = key_coords(res, AMINOACIDS['TRP']['center'], AMINOACIDS['TRP']['k'],
+                                    AMINOACIDS['TRP']['n'])
+        p, u = key_coords(res, AMINOACIDS['TRP']['p'], AMINOACIDS['TRP']['u'])
+        fcenter = ((k - p) * (center.distance(u) / ((-2)*k.distance(p)))) + center
+        return fcenter, [center, k, n, k, p]
+    elif res_name == 'TYR':
+        center, k, n = key_coords(res, AMINOACIDS['TYR']['center'], AMINOACIDS['TYR']['k'],
+                                    AMINOACIDS['TYR']['n'])
+        p, u = key_coords(res, AMINOACIDS['TYR']['p'], AMINOACIDS['TYR']['u'])
+        fcenter = ((k - p) * (center.distance(u) / ((-2)*k.distance(p)))) + center
+        return fcenter, [center, k, n, k, p]
+    elif res_name == 'PHE':
+        center, k, n = key_coords(res, AMINOACIDS['TYR']['center'], AMINOACIDS['TYR']['k'],
+                                    AMINOACIDS['TYR']['n'])
+        p, u = key_coords(res, AMINOACIDS['TYR']['p'], AMINOACIDS['TYR']['u'])
+        fcenter = ((k - p) * (center.distance(u) / ((-2)*k.distance(p)))) + center
+        return fcenter, [center, k, n, k, p]
+    elif res_name == 'HIS':
+        center, n = key_coords(res, AMINOACIDS['HIS']['center'], AMINOACIDS['HIS']['n'])
+        k, p = key_coords(res, AMINOACIDS['HIS']['k'], AMINOACIDS['HIS']['p'])
+        center2 = ((-1)*(n - center)) + center
+        return center2, [center, n, center2, k, p]
+    elif res_name == 'PRO':
+        center, n = key_coords(res, AMINOACIDS['PRO']['center'], AMINOACIDS['PRO']['n'])
+        return center, [center, n, center]
+    else:
+        print 'residue no detectat'
+
+                
+
+
+def sphere_transform(origin_coord, return_coord):
+    zero_matrix = Zmatrix(origin_coord)
+    MZ = M.xform_matrix(zero_matrix)
+
+    translation_matrix = Tmatrix(return_coord)
+    MT = M.xform_matrix(translation_matrix) 
+
+    mlist = [MT, MZ]
+    to_apply = M.chimera_xform(M.multiply_matrices(*mlist))
+
+    return to_apply
+
+
+
+def transform(origin_coord, return_coord, ref_points, s2_points):
+    zero_matrix = Zmatrix(origin_coord)
+    MZ = M.xform_matrix(zero_matrix)
+
+    translation_matrix = Tmatrix(return_coord)
+    MT = M.xform_matrix(translation_matrix)
+
+    vec1 = ref_points[1] - ref_points[2]
+    vec2 = s2_points[1] - s2_points[2]
+    rotation_matrix = Rmatrix(vec1, vec2)
+    MR = M.xform_matrix(rotation_matrix)
+
+    mlist = [MT, MR, MZ]
+    MA = M.multiply_matrices(*mlist)
+    to_apply = M.chimera_xform(MA)
+    
+    if len(ref_points) == 5:
+        x_points = recalculate_vertex(to_apply, ref_points)
+        vecx = x_points[3] - x_points[4]
+        vec3 = s2_points[3] - s2_points[4]
+        #print(vecx, vec3)
+        #print(x_points[2], x_points[1])
+        #print(s2_points[2], s2_points[1])
+        rotation_matrix2 = Rmatrix(vecx, vec3)
+        MR2 = M.xform_matrix(rotation_matrix2)
+        
+        mlist2 = [MT, MR2, MR, MZ]
+        to_apply2 = M.chimera_xform(M.multiply_matrices(*mlist2))
+
+        return to_apply2
+    else:
+        return to_apply
+
+
+   
+def calculate_triangle_vertex(n, k, p, u):
+    vec_nk = n - k
+    vec_pu = p - u
+    half_length = 3.4 / 2.0
+    thickness = 3.4 / 6.0
+    adjustment_nk = half_length / k.distance(n)
+    adjustment_pu = half_length / p.distance(u)
+    adj_vec_nk1 = vec_nk * adjustment_nk
+    adj_vec_nk2 = adj_vec_nk1 * -1
+    center = ((adj_vec_nk2) * 0.5) + n
+    adj_vec_pu1 = vec_pu * (adjustment_pu)
+    adj_vec_pu2 = adj_vec_pu1 * -1
+
+    x1 = adj_vec_nk1 + center
+    x2 = adj_vec_nk2 + center
+    o1 = adj_vec_pu1 + x1
+    o2 = adj_vec_pu1 + x2
+    o3 = adj_vec_pu2 + x1
+
+    perp_for = normalize(cross(o1 - o2, o3 - o1)) * thickness
+    perp_back = -1 * perp_for    
+
+    s1=perp_for + x2
+    s2=perp_back + x2
+    s3=perp_for + o3
+    s4=perp_back + o3
+    s5=perp_for + o1
+    s6=perp_back + o1
+
+    return [center, s3, s5, s4, s3] #s1, s2, s3, s4, s5, s6]
+
+
+
+def recalculate_vertex(matrix, s1_points):
+    """ Recalculate vertex of triangle after rotation. """
+    new_points = []
+    for i in s1_points:
+        new_points.append(matrix.apply(i))
+    return new_points
+
 
 
 def _vmd_trans_angle(a, b, c, delta):
@@ -1083,14 +1424,14 @@ def hexagon(center, n, p, k, u, size, color1, name, transparency=0):
     thickness = size / 4.5
     vec_for = normalize(cross(vec_kn, vec_kp)) * thickness
     vec_back = -1 * vec_for
-    if size == 3.5:
+    if size == 3.5: #TRP
         adjust1 = 1 / length(vec_kn) * 1.7
         adj_vec_kn = adjust1 * vec_kn
         adjust2 = 1 / length(vec_kp) * 1.7
         adj_vec_kp = adjust2 * vec_kp
         c2 = adj_vec_kn + center
         o1 = adj_vec_kp + center
-    else:
+    else: #PHE and TYR
         c2 = vec_kn + center
         o1 = vec_kp + center
     d1 = center - o1
@@ -1161,3 +1502,55 @@ def add_vrml_model(vrml_string, name):
     else:
         chimera.openModels.add(vrml)
         return vrml
+
+
+
+"""
+def detect_xform_change():
+    chimera._xform_change = chimera.triggers.addHandler('OpenState', _OpenState_response, chimera.openModels.list()[0])
+
+
+def undetect_xform_change():
+    if hasattr(chimera, "_xform_change"):
+        chimera.triggers.deleteHandler("OpenState", chimera._xform_change)
+        del chimera._xform_change
+
+
+def _OpenState_response(trigName, myData, trigData):
+    return myData.openState.xform 
+    
+
+def key_coords(res, a1, a2=None, a3=None, xform_change=None):
+    if a2:
+        if a3:
+            for at in res.atoms:
+                if at.name == a1:
+                    atom1 = at.coord()
+                elif at.name == a2:
+                    atom2 = at.coord()
+                elif at.name == a3:
+                    atom3 = at.coord()
+            if xform_change:
+                return xform_change.apply(atom1), xform_change.apply(atom2), xform_change.apply(atom3)
+            else:
+                return atom1, atom2, atom3
+        else:
+            for at in res.atoms:
+                if at.name == a1:
+                    atom1 = at.coord()
+                elif at.name == a2:
+                    atom2 = at.coord()
+            if xform_change:
+                return xform_change.apply(atom1), xform_change.apply(atom2)
+            else:
+                return atom1, atom2
+    else:
+        for at in res.atoms:
+            if at.name == a1:
+                atom1 = at.coord()
+        if xform_change:
+            return xform_change.apply(atom1)
+        else:
+            return atom1
+
+"""
