@@ -8,27 +8,21 @@ TALAIA
 Simplistic 3D dictionary of amino acids using geometric shapes
 for UCSF Chimera.
 """
-
-
-from textwrap import dedent
-import math
-import numpy
 import argparse
 from collections import defaultdict
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from StringIO import StringIO
-
+from textwrap import dedent
+import math
 import numpy as np
-
 import chimera
 from Bld2VRML import openFileObject as openBildFileObject
 from chimera import runCommand as run, cross, Point, Vector, preferences
 from chimera import selection, specifier, Xform
 from Shape import shapecmd
 import Matrix as M
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 
 AMINOACIDS = {
@@ -182,7 +176,6 @@ AMINOACIDS = {
         figure="hexagon",
         size=3.4,
         color1=("aquamarine", "red"),
-        #color2="red",
         all_atoms=[
             "N",
             "CA",
@@ -265,7 +258,7 @@ AMINOACIDS = {
         name="HIS",
         figure="pentagon",
         size=3.4,
-        color1=["blue","aquamarine","red"],
+        color1=["blue", "aquamarine", "red"],
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "ND1", "CD2", "CE1", "NE2"],
         center="CG",
         n="CB",
@@ -286,19 +279,16 @@ def enable(selection=None, transparency=0):
     """
     Depiction of every residue contained in selection with a vrml model.
     Parameters used for figures' depiction are fetched from AMINOACIDS dictionary.
-
     Parameters
     ----------
     selection: str
-        Chimera specification query or list of residues
+    	Chimera specification query or list of residues
     transparency: float
     """
-
     if selection is None:
         nearRes = (
             chimera.specifier.evalSpec("ligand zr < 8").residues()
-            or chimera.specifier.evalSpec("all").residues()
-        )
+            or chimera.specifier.evalSpec("all").residues())
 
     elif isinstance(selection, basestring):
         nearRes = chimera.specifier.evalSpec(selection).residues()
@@ -311,15 +301,7 @@ def enable(selection=None, transparency=0):
             if res.type in ALTERNATIVE_NAME.keys():
                 alt_name = ALTERNATIVE_NAME.get(res.type)
                 res_info = AMINOACIDS.get(alt_name)
-            elif res.isMetal:
-                continue
-                """
-                for at in res.atoms:
-                    ion_center = at.coord()
-                    ion_star(ion_center, 3 * at.radius, at.color)
-                    continue
-                """
-            elif res.isHet:
+            elif res.isMetal or res.isHet:
                 continue
             else:
                 if "CA" not in res.atomsMap:
@@ -332,7 +314,7 @@ def enable(selection=None, transparency=0):
         if res_info:
             res._depicted = True
             res.molecule._depicted = dict(
-                selection=selection, transparency=transparency
+            	   selection=selection, transparency=transparency
             )
             name = res_info.get("name")
             shape = res_info.get("figure")
@@ -341,7 +323,6 @@ def enable(selection=None, transparency=0):
             tp = transparency
             color1 = res_info.get("color1")
             color2 = res_info.get("color2")
-            
 
             if res_info.get("center") is not None:
                 center = res.atomsMap[res_info["center"]][0].coord()
@@ -371,7 +352,7 @@ def enable(selection=None, transparency=0):
                 pentagon(center, n, p, k, r1, color1, rt, name, tp)
             elif shape == "hexagon":
                 hexagon(center, n, p, k, u, r1, color1, name, tp)
-            
+
             opened = chimera.openModels.list()
             key = 'refreshing_' + str(res.id)
             key = dict(
@@ -383,12 +364,10 @@ def enable(selection=None, transparency=0):
                             ref_points=detect_type(res, name)[1],
                             vec2=None)
             )
-
             all_refreshing.append(key)
 
     subscribe_events()
     return all_refreshing
-
 
 
 def disable():
@@ -398,9 +377,9 @@ def disable():
     all_models = chimera.openModels.list()
     for item in all_models:
         if (
-            item.name.startswith("vrml_")
-            or item.name == "ellipsoid"
-            or item.name == "sphere"
+                item.name.startswith("vrml_")
+                or item.name == "ellipsoid"
+                or item.name == "sphere"
         ):
             chimera.openModels.close([item])
         if hasattr(item, "_depicted"):
@@ -415,12 +394,15 @@ def disable():
     all_refreshing[:] = []
 
 
-
 def subscribe_events():
+    """
+    """
     chimera._depicter_handler = chimera.triggers.addHandler("Molecule", callback, all_refreshing)
 
 
 def unsubscribe_events():
+    """
+    """
     if hasattr(chimera, "_depicter_handler"):
         chimera.triggers.deleteHandler("Molecule", chimera._depicter_handler)
         del chimera._depicter_handler
@@ -435,23 +417,23 @@ def callback(name, data, changes):
     modified_mols = set(depicted) & changes.modified
     deleted_mols = set(depicted) & changes.deleted
     if any(
-        [
-            (modified_mols and "activeCoordSet changed" in changes.reasons),
-            (modified_mols and "atoms moved" in changes.reasons),
-            deleted_mols,
-        ]
+            [
+                (modified_mols and "activeCoordSet changed" in changes.reasons),
+                (modified_mols and "atoms moved" in changes.reasons),
+                deleted_mols]
     ):
         for i in range(len(all_refreshing)):
             ref_points = all_refreshing[i]['frames'].get('ref_points')
             ref_center = all_refreshing[i]['frames'].get('ref_center')
-            return_coord, s2_points = detect_type(all_refreshing[i].get('residue'),all_refreshing[i].get('name'))
-
-            refresh(all_refreshing[i]['shape'], ref_center, return_coord, ref_points, 
+            return_coord, s2_points = detect_type(all_refreshing[i].get('residue'),
+                                                  all_refreshing[i].get('name'))
+            refresh(all_refreshing[i]['shape'], ref_center, return_coord, ref_points,
                     s2_points, all_refreshing[i].get('model'))
 
 
-
 def proton_eval(residue):
+    """
+    """
     ct = 0
     h_ct = 0
     for key in residue.atomsMap.keys():
@@ -460,53 +442,55 @@ def proton_eval(residue):
             h_ct += 1
     if h_ct != 0:
         for at in residue.atoms:
-            if at.idatmType == 'N2'	:
-                ct +=1
+            if at.idatmType == 'N2':
+                ct += 1
     else:
         ct = 1
-        
+
     return ct
 
 
-
 def Zmatrix(origin_coord):
-    ZERO = Point(0,0,0)
+    """
+    """
+    ZERO = Point(0, 0, 0)
     get_zero = ZERO - origin_coord
     zero_matrix = Xform.translation(get_zero)
     return zero_matrix
 
 
-
 def Tmatrix(return_coord):
-    ZERO = Point(0,0,0)
+    """
+    """
+    ZERO = Point(0, 0, 0)
     get_back = return_coord - ZERO
     translation_matrix = Xform.translation(get_back)
     return translation_matrix
 
 
-
 def Rmatrix(vec1, vec2):
+    """
+    """
     vec1.normalize()
     vec2.normalize()
     near_zero = 1e-15
     rvec = chimera.cross(vec1, vec2)
-    if rvec == chimera.Vector(0,0,0):
-        MI = ((1,0,0,0),(0,1,0,0),(0,0,1,0))
+    if rvec == chimera.Vector(0, 0, 0):
+        MI = ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0))
         return M.chimera_xform(MI)
-    else: 
+    else:
         theta = chimera.angle(vec1, vec2)
         rotation_matrix = Xform.rotation(rvec, theta)
         return rotation_matrix
-    
 
 
 def refresh(shape, origin_coord, return_coord, ref_points, s2_points, model):
-    
+    """
+    """
     if shape == 'sphere':
         xform = sphere_transform(origin_coord, return_coord)
     else:
         xform = transform(origin_coord, return_coord, ref_points, s2_points)
-    
     mol = chimera.openModels.list()[0]
     curxform = mol.openState.xform
     XF = M.xform_matrix(xform)
@@ -516,45 +500,46 @@ def refresh(shape, origin_coord, return_coord, ref_points, s2_points, model):
     model.openState.xform = to_apply
 
 
-
-
 def key_coords(res, a1, a2=None, a3=None):
-	if a2:
-		if a3:
-			for at in res.atoms:
-				if at.name == a1:
-					atom1 = at.coord()
-				elif at.name == a2:
-					atom2 = at.coord()
-				elif at.name == a3:
-					atom3 = at.coord()
-			return atom1, atom2, atom3
-		else:
-			for at in res.atoms:
-				if at.name == a1:
-					atom1 = at.coord()
-				elif at.name == a2:
-					atom2 = at.coord()
-			return atom1, atom2
-	else:
-		for at in res.atoms:
-			if at.name == a1:
-				atom1 = at.coord()
-		return atom1
-
-
+    """
+    """
+    if a2:
+        if a3:
+            for at in res.atoms:
+                if at.name == a1:
+                    atom1 = at.coord()
+                elif at.name == a2:
+                    atom2 = at.coord()
+                elif at.name == a3:
+                    atom3 = at.coord()
+            return atom1, atom2, atom3
+        else:
+            for at in res.atoms:
+                if at.name == a1:
+                    atom1 = at.coord()
+                elif at.name == a2:
+                    atom2 = at.coord()
+            return atom1, atom2
+    else:
+        for at in res.atoms:
+            if at.name == a1:
+                atom1 = at.coord()
+        return atom1
 
 
 def detect_non_standard(res):
+    """
+    """
     atom_map = res.atomsMap.keys()
     for item in AMINOACIDS:
         calls = {}
-        if compare_all_atoms(AMINOACIDS[i], atom_map, calls):
+        if compare_all_atoms(AMINOACIDS[item], atom_map, calls):
             return res, item
 
 
-
 def compare_all_atoms(pattern, text, calls):
+    """
+    """
     text = convert_unicode_to_string(remove_hydrogens(text))
     key = str(pattern) + ':' + str(text)
     if key in calls:
@@ -575,8 +560,9 @@ def compare_all_atoms(pattern, text, calls):
         return minimum
 
 
-
 def convert_unicode_to_string(map_list):
+    """
+    """
     new_list = []
     for i in map_list:
         j = str(i)
@@ -584,24 +570,23 @@ def convert_unicode_to_string(map_list):
     return new_list
 
 
-
 def remove_hydrogens(atom_list):
+    """
+    """
     no_hydrogen = []
     for i in atom_list:
         if i.startswith('H'):
             pass
         else:
             no_hydrogen.append(i)
-        
     return no_hydrogen
-
 
 
 def detect_type(res, res_name):
     """
     non_standard = []
     if res.type not in AMINOACIDS.keys():
-        non_standard.append(res)
+    	non_standard.append(res)
 
     """
     if res_name == 'GLY' or res_name == 'ALA':
@@ -658,23 +643,23 @@ def detect_type(res, res_name):
         return center, [center, n, p, center, k]
     elif res_name == 'LYS':
         center, n, k = key_coords(res, AMINOACIDS['LYS']['center'], AMINOACIDS['LYS']['n'],
-                                AMINOACIDS['LYS']['k'])
+                                  AMINOACIDS['LYS']['k'])
         return center, [center, n, k]
     elif res_name == 'TRP':
         center, k, n = key_coords(res, AMINOACIDS['TRP']['center'], AMINOACIDS['TRP']['k'],
-                                    AMINOACIDS['TRP']['n'])
+                                  AMINOACIDS['TRP']['n'])
         p, u = key_coords(res, AMINOACIDS['TRP']['p'], AMINOACIDS['TRP']['u'])
         fcenter = ((k - p) * (center.distance(u) / ((-2)*k.distance(p)))) + center
         return fcenter, [center, k, n, k, p]
     elif res_name == 'TYR':
         center, k, n = key_coords(res, AMINOACIDS['TYR']['center'], AMINOACIDS['TYR']['k'],
-                                    AMINOACIDS['TYR']['n'])
+                                  AMINOACIDS['TYR']['n'])
         p, u = key_coords(res, AMINOACIDS['TYR']['p'], AMINOACIDS['TYR']['u'])
         fcenter = ((k - p) * (center.distance(u) / ((-2)*k.distance(p)))) + center
         return fcenter, [center, k, n, k, p]
     elif res_name == 'PHE':
         center, k, n = key_coords(res, AMINOACIDS['TYR']['center'], AMINOACIDS['TYR']['k'],
-                                    AMINOACIDS['TYR']['n'])
+                                  AMINOACIDS['TYR']['n'])
         p, u = key_coords(res, AMINOACIDS['TYR']['p'], AMINOACIDS['TYR']['u'])
         fcenter = ((k - p) * (center.distance(u) / ((-2)*k.distance(p)))) + center
         return fcenter, [center, k, n, k, p]
@@ -689,15 +674,15 @@ def detect_type(res, res_name):
     else:
         print 'residue no detectat'
 
-                
-
 
 def sphere_transform(origin_coord, return_coord):
+    """
+    """
     zero_matrix = Zmatrix(origin_coord)
     MZ = M.xform_matrix(zero_matrix)
 
     translation_matrix = Tmatrix(return_coord)
-    MT = M.xform_matrix(translation_matrix) 
+    MT = M.xform_matrix(translation_matrix)
 
     mlist = [MT, MZ]
     to_apply = M.chimera_xform(M.multiply_matrices(*mlist))
@@ -705,8 +690,9 @@ def sphere_transform(origin_coord, return_coord):
     return to_apply
 
 
-
 def transform(origin_coord, return_coord, ref_points, s2_points):
+    """
+    """
     zero_matrix = Zmatrix(origin_coord)
     MZ = M.xform_matrix(zero_matrix)
 
@@ -721,24 +707,24 @@ def transform(origin_coord, return_coord, ref_points, s2_points):
     mlist = [MT, MR, MZ]
     MA = M.multiply_matrices(*mlist)
     to_apply = M.chimera_xform(MA)
-    
+
     if len(ref_points) == 5:
         x_points = recalculate_vertex(to_apply, ref_points)
         vecx = x_points[3] - x_points[4]
         vec3 = s2_points[3] - s2_points[4]
         rotation_matrix2 = Rmatrix(vecx, vec3)
         MR2 = M.xform_matrix(rotation_matrix2)
-        
+
         mlist2 = [MT, MR2, MR, MZ]
         to_apply2 = M.chimera_xform(M.multiply_matrices(*mlist2))
-
         return to_apply2
     else:
         return to_apply
 
 
-   
 def calculate_triangle_vertex(n, k, p, u):
+    """
+    """
     vec_nk = n - k
     vec_pu = p - u
     half_length = 3.4 / 2.0
@@ -758,26 +744,26 @@ def calculate_triangle_vertex(n, k, p, u):
     o3 = adj_vec_pu2 + x1
 
     perp_for = normalize(cross(o1 - o2, o3 - o1)) * thickness
-    perp_back = -1 * perp_for    
+    perp_back = -1 * perp_for
 
-    s1=perp_for + x2
-    s2=perp_back + x2
-    s3=perp_for + o3
-    s4=perp_back + o3
-    s5=perp_for + o1
-    s6=perp_back + o1
+    s1 = perp_for + x2
+    s2 = perp_back + x2
+    s3 = perp_for + o3
+    s4 = perp_back + o3
+    s5 = perp_for + o1
+    s6 = perp_back + o1
 
-    return [center, s3, s5, s4, s3] #s1, s2, s3, s4, s5, s6]
-
+    return [center, s3, s5, s4, s3]
 
 
 def recalculate_vertex(matrix, s1_points):
-    """ Recalculate vertex of triangle after rotation. """
+    """
+    Recalculate vertex of triangle after rotation.
+    """
     new_points = []
     for i in s1_points:
         new_points.append(matrix.apply(i))
     return new_points
-
 
 
 def _vmd_trans_angle(a, b, c, delta):
@@ -792,6 +778,8 @@ def _vmd_trans_angle(a, b, c, delta):
 
 
 def _rotate(a, b, c, delta, x):
+    """
+    """
     rotation_xform = _vmd_trans_angle(a, b, c, delta)
     rotation_array = np.array(rotation_xform.getOpenGLMatrix()).reshape(4, 4).T
     return Vector(*np.dot(rotation_array, x.data() + (0,))[:3])
@@ -890,8 +878,8 @@ def ellipsoid(k, n, transparency=0):
     # If dotproduct != 1 neet to change y component sign.
     u_vec_kn = vec_kn * (1 / length(vec_kn))
     if (
-        abs(dotproduct(vrot, u_vec_kn)) < 0.999999
-        or abs(dotproduct(vrot, u_vec_kn)) > 1.0001
+            abs(dotproduct(vrot, u_vec_kn)) < 0.999999
+            or abs(dotproduct(vrot, u_vec_kn)) > 1.0001
     ):
         y = -1 * y
     shapecmd.sphere_shape(
@@ -990,7 +978,6 @@ def triangle(n, p, k, u, size, color1, color2, transparency, name):
     o1 = adj_vec_pu1 + x1
     o2 = adj_vec_pu1 + x2
     o3 = adj_vec_pu2 + x1
-    # o4 = perp2 + x2
 
     perp_for = normalize(cross(o1 - o2, o3 - o1)) * thickness
     perp_back = -1 * perp_for
@@ -1078,9 +1065,8 @@ def cone(center, n, p, size, color1, color2, name, transparency=0):
         mid_list.append(p)
 
     color_and_points.update(dict(mid1=mid_list[0], mid2=mid_list[1],
-                            mid3=mid_list[2], x1=x1, x4=x4, color1=color1, 
-                            color2=color2, tp=tp))
-
+                                 mid3=mid_list[2], x1=x1, x4=x4, color1=color1,
+                                 color2=color2, tp=tp))
     bild = """
     .color {color1}
     .transparency {tp}
@@ -1099,20 +1085,6 @@ def cone(center, n, p, size, color1, color2, name, transparency=0):
     """.format(**color_and_points)
 
     add_vrml_model(bild, "cone_" + name)
-
-
-
-    #bild = """
-    #.color {color1}
-    #.transparency {tp}
-    #.polygon {x4} {outer_1} {outer_2}
-    #.polygon {x4} {outer_2} {outer_3}
-    #.polygon {x4} {outer_3} {outer_1}
-    #.polygon {outer_1} {outer_2} {outer_3}
-    #""".format(
-    #    **color_and_points
-    #)
-    #add_vrml_model(bild, "cone_" + name)
 
 
 def rectangle(center, n, p, k, size, color1, color2, name, transparency=0):
@@ -1180,9 +1152,7 @@ def rectangle(center, n, p, k, size, color1, color2, name, transparency=0):
         color2=color2,
         tp=tp,
     )
-
     # Draw the rectangle
-
     bild = """
     .color {color1}
     .transparency {tp}
@@ -1382,8 +1352,6 @@ def star(center, n, p, size, color1, transparency=0):
     add_vrml_model(bild, "star")
 
 
-
-
 def pentagon(center, n, p, k, size, color1, rt, name, transparency=0):
     """
     Used for residues H and W.
@@ -1398,7 +1366,6 @@ def pentagon(center, n, p, k, size, color1, rt, name, transparency=0):
     color1 = color1[rt]
     vec_cn = n - center
     vec_kp = k - p
-    # half_length = size / 2.0
     thickness = size / 4.5
 
     perp_for = normalize(cross(vec_cn, vec_kp)) * thickness
@@ -1477,7 +1444,7 @@ def hexagon(center, n, p, k, u, size, color1, name, transparency=0):
     k = Point(*k)
     u = Point(*u)
     tp = transparency
-    if type(color1) is tuple:
+    if isinstance(color1, tuple):
         color2 = color1[1]
         color1 = color1[0]
     else:
@@ -1490,14 +1457,14 @@ def hexagon(center, n, p, k, u, size, color1, name, transparency=0):
     thickness = size / 4.5
     vec_for = normalize(cross(vec_kn, vec_kp)) * thickness
     vec_back = -1 * vec_for
-    if size == 3.5: #TRP
+    if size == 3.5:  #TRP
         adjust1 = 1 / length(vec_kn) * 1.7
         adj_vec_kn = adjust1 * vec_kn
         adjust2 = 1 / length(vec_kp) * 1.7
         adj_vec_kp = adjust2 * vec_kp
         c2 = adj_vec_kn + center
         o1 = adj_vec_kp + center
-    else: #PHE and TYR
+    else:  #PHE and TYR
         c2 = vec_kn + center
         o1 = vec_kp + center
     d1 = center - o1
@@ -1523,7 +1490,8 @@ def hexagon(center, n, p, k, u, size, color1, name, transparency=0):
         back_6=vec_back + outer[5],
         center_1=vec_for + ((vec_kp * half_ring) + center),
         center_2=vec_back + ((vec_kp * half_ring) + center),
-        color1=color1,color2=color2,
+        color1=color1,
+        color2=color2,
         tp=tp,
     )
 
@@ -1534,8 +1502,7 @@ def hexagon(center, n, p, k, u, size, color1, name, transparency=0):
     mid_3 = vec32 + color_and_points['back_2']
     mid_4 = vec32 + color_and_points['back_6']
 
-    color_and_points.update(dict(mid_1=mid_1,mid_2=mid_2,mid_3=mid_3,mid_4=mid_4))
-    
+    color_and_points.update(dict(mid_1=mid_1, mid_2=mid_2, mid_3=mid_3, mid_4=mid_4))
 
     bild = """
     .color {color1}
@@ -1577,12 +1544,13 @@ def hexagon(center, n, p, k, u, size, color1, name, transparency=0):
 
 
 def add_vrml_model(vrml_string, name):
+    """
+    """
     f = StringIO(dedent(vrml_string))
     try:
         vrml = openBildFileObject(f, "<string>", "vrml_" + name)
     except chimera.NotABug:
-        print(vrml_string)
+        print vrml_string
     else:
         chimera.openModels.add(vrml)
         return vrml
-
