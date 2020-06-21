@@ -124,7 +124,8 @@ AMINOACIDS = {
         name="SER",
         figure="cone",
         size=3.4,
-        color1="orange",
+        color1="aquamarine",
+        color2="red",
         all_atoms=["N", "CA", "O", "C", "CB", "OG"],
         center="OG",
         n="CA",
@@ -134,7 +135,8 @@ AMINOACIDS = {
         name="THR",
         figure="cone",
         size=3.4,
-        color1="orange",
+        color1="aquamarine",
+        color2="red",
         all_atoms=["N", "CA", "O", "C", "CB", "OG1", "CG2"],
         center="OG1",
         n="CA",
@@ -144,7 +146,8 @@ AMINOACIDS = {
         name="CYS",
         figure="cone",
         size=3.4,
-        color1="orange",
+        color1="aquamarine",
+        color2="yellow",
         all_atoms=["N", "CA", "C", "O", "CB", "SG"],
         center="SG",
         n="CA",
@@ -154,7 +157,7 @@ AMINOACIDS = {
         name="ASN",
         figure="triangle",
         size=3.4,
-        color1="orange",
+        color1="aquamarine",
         color2="blue",
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "OD1", "ND2"],
         k="CA",
@@ -166,7 +169,7 @@ AMINOACIDS = {
         name="GLN",
         figure="triangle",
         size=3.4,
-        color1="orange",
+        color1="aquamarine",
         color2="blue",
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "CD", "OE1", "NE2"],
         k="CB",
@@ -178,7 +181,8 @@ AMINOACIDS = {
         name="TYR",
         figure="hexagon",
         size=3.4,
-        color1="orange",
+        color1=("aquamarine", "red"),
+        #color2="red",
         all_atoms=[
             "N",
             "CA",
@@ -261,7 +265,7 @@ AMINOACIDS = {
         name="HIS",
         figure="pentagon",
         size=3.4,
-        color1="yellow",
+        color1=["blue","aquamarine","red"],
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "ND1", "CD2", "CE1", "NE2"],
         center="CG",
         n="CB",
@@ -298,7 +302,7 @@ def enable(selection=None, transparency=0):
 
     elif isinstance(selection, basestring):
         nearRes = chimera.specifier.evalSpec(selection).residues()
-    else:  # we assume it is a list of residues
+    else:  # we assume it is a list of residues. If list of atoms, residues are depicted anyway.
         nearRes = selection
     complete_residues(nearRes)
     for res in nearRes:
@@ -308,16 +312,22 @@ def enable(selection=None, transparency=0):
                 alt_name = ALTERNATIVE_NAME.get(res.type)
                 res_info = AMINOACIDS.get(alt_name)
             elif res.isMetal:
+                continue
+                """
                 for at in res.atoms:
                     ion_center = at.coord()
                     ion_star(ion_center, 3 * at.radius, at.color)
                     continue
+                """
             elif res.isHet:
                 continue
             else:
                 if "CA" not in res.atomsMap:
                     center = res.atoms[0].coord()
                     continue
+        if res.type == 'HIS':
+            rt = proton_eval(res)
+        rt = proton_eval(res)
 
         if res_info:
             res._depicted = True
@@ -331,7 +341,7 @@ def enable(selection=None, transparency=0):
             tp = transparency
             color1 = res_info.get("color1")
             color2 = res_info.get("color2")
-            rt = res_info.get("rot_factor")
+            
 
             if res_info.get("center") is not None:
                 center = res.atomsMap[res_info["center"]][0].coord()
@@ -352,7 +362,7 @@ def enable(selection=None, transparency=0):
             elif shape == "triangle":
                 triangle(n, p, k, u, r1, color1, color2, tp, name)
             elif shape == "cone":
-                cone(center, n, p, r1, color1, name, tp)
+                cone(center, n, p, r1, color1, color2, name, tp)
             elif shape == "cube":
                 cube(center, n, p, r1, color1, name, tp)
             elif shape == "rectangle":
@@ -441,6 +451,24 @@ def callback(name, data, changes):
 
 
 
+def proton_eval(residue):
+    ct = 0
+    h_ct = 0
+    for key in residue.atomsMap.keys():
+        k = str(key)
+        if k.startswith('H'):
+            h_ct += 1
+    if h_ct != 0:
+        for at in residue.atoms:
+            if at.idatmType == 'N2'	:
+                ct +=1
+    else:
+        ct = 1
+        
+    return ct
+
+
+
 def Zmatrix(origin_coord):
     ZERO = Point(0,0,0)
     get_zero = ZERO - origin_coord
@@ -461,15 +489,13 @@ def Rmatrix(vec1, vec2):
     vec1.normalize()
     vec2.normalize()
     near_zero = 1e-15
-    if chimera.cross(vec1, vec2) == chimera.Vector(0,0,0):
+    rvec = chimera.cross(vec1, vec2)
+    if rvec == chimera.Vector(0,0,0):
         MI = ((1,0,0,0),(0,1,0,0),(0,0,1,0))
         return M.chimera_xform(MI)
     else: 
-        #print(vec1)
-        #print(vec2)
-        rot_vec = chimera.cross(vec1, vec2)
         theta = chimera.angle(vec1, vec2)
-        rotation_matrix = Xform.rotation(rot_vec, theta)
+        rotation_matrix = Xform.rotation(rvec, theta)
         return rotation_matrix
     
 
@@ -573,6 +599,10 @@ def remove_hydrogens(atom_list):
 
 def detect_type(res, res_name):
     """
+    non_standard = []
+    if res.type not in AMINOACIDS.keys():
+        non_standard.append(res)
+
     """
     if res_name == 'GLY' or res_name == 'ALA':
         center = key_coords(res, AMINOACIDS['GLY']['center'])
@@ -696,9 +726,6 @@ def transform(origin_coord, return_coord, ref_points, s2_points):
         x_points = recalculate_vertex(to_apply, ref_points)
         vecx = x_points[3] - x_points[4]
         vec3 = s2_points[3] - s2_points[4]
-        #print(vecx, vec3)
-        #print(x_points[2], x_points[1])
-        #print(s2_points[2], s2_points[1])
         rotation_matrix2 = Rmatrix(vecx, vec3)
         MR2 = M.xform_matrix(rotation_matrix2)
         
@@ -1000,7 +1027,7 @@ def triangle(n, p, k, u, size, color1, color2, transparency, name):
     add_vrml_model(bild, "triangle_" + name)
 
 
-def cone(center, n, p, size, color1, name, transparency=0):
+def cone(center, n, p, size, color1, color2, name, transparency=0):
     """
     Used for residues S, T, C.
     Defines an orange 3-base pyramid with vertex pointing to OH/SH
@@ -1043,19 +1070,49 @@ def cone(center, n, p, size, color1, name, transparency=0):
     color_and_points = {
         "outer_{}".format(i + 1): value for i, value in enumerate(outer)
     }
-    color_and_points.update(dict(x1=x1, x4=x4, color1=color1, tp=tp))
+
+    mid_list = []
+    for item in color_and_points:
+        vec = (color_and_points[item] - x4) / 1.5
+        p = x4 + vec
+        mid_list.append(p)
+
+    color_and_points.update(dict(mid1=mid_list[0], mid2=mid_list[1],
+                            mid3=mid_list[2], x1=x1, x4=x4, color1=color1, 
+                            color2=color2, tp=tp))
 
     bild = """
     .color {color1}
     .transparency {tp}
-    .polygon {x4} {outer_1} {outer_2}
-    .polygon {x4} {outer_2} {outer_3}
-    .polygon {x4} {outer_3} {outer_1}
+    .polygon {mid3} {outer_1} {outer_2}
+    .polygon {mid3} {mid2} {outer_2}
+    .polygon {mid2} {outer_2} {outer_3}
+    .polygon {mid2} {mid1} {outer_3}
+    .polygon {mid1} {outer_3} {outer_1}
+    .polygon {mid1} {mid3} {outer_1}
     .polygon {outer_1} {outer_2} {outer_3}
-    """.format(
-        **color_and_points
-    )
+    .color {color2}
+    .transparency {tp}
+    .polygon {x4} {mid1} {mid2}
+    .polygon {x4} {mid2} {mid3}
+    .polygon {x4} {mid1} {mid3}
+    """.format(**color_and_points)
+
     add_vrml_model(bild, "cone_" + name)
+
+
+
+    #bild = """
+    #.color {color1}
+    #.transparency {tp}
+    #.polygon {x4} {outer_1} {outer_2}
+    #.polygon {x4} {outer_2} {outer_3}
+    #.polygon {x4} {outer_3} {outer_1}
+    #.polygon {outer_1} {outer_2} {outer_3}
+    #""".format(
+    #    **color_and_points
+    #)
+    #add_vrml_model(bild, "cone_" + name)
 
 
 def rectangle(center, n, p, k, size, color1, color2, name, transparency=0):
@@ -1325,6 +1382,8 @@ def star(center, n, p, size, color1, transparency=0):
     add_vrml_model(bild, "star")
 
 
+
+
 def pentagon(center, n, p, k, size, color1, rt, name, transparency=0):
     """
     Used for residues H and W.
@@ -1336,7 +1395,7 @@ def pentagon(center, n, p, k, size, color1, rt, name, transparency=0):
     p = Point(*p)
     k = Point(*k)
     tp = transparency
-
+    color1 = color1[rt]
     vec_cn = n - center
     vec_kp = k - p
     # half_length = size / 2.0
@@ -1344,8 +1403,8 @@ def pentagon(center, n, p, k, size, color1, rt, name, transparency=0):
 
     perp_for = normalize(cross(vec_cn, vec_kp)) * thickness
     perp_back = -1 * perp_for
-    c2 = (vec_cn * abs(1 / rt)) + center
-    o1 = (vec_kp * abs(1 / rt)) + center
+    c2 = (vec_cn) + center
+    o1 = (vec_kp) + center
     d1 = c2 - center
 
     vertex = [
@@ -1356,9 +1415,9 @@ def pentagon(center, n, p, k, size, color1, rt, name, transparency=0):
     outer = []
 
     for v in vertex:
-        outer.append(((rt / abs(rt)) * vec_cn) + v)
+        outer.append((-1 * vec_cn) + v)
 
-    ct = (rt / abs(rt)) * vec_cn + center
+    ct = (-1 * vec_cn) + center
 
     color_and_points = dict(
         front_1=perp_for + outer[0],
@@ -1418,6 +1477,13 @@ def hexagon(center, n, p, k, u, size, color1, name, transparency=0):
     k = Point(*k)
     u = Point(*u)
     tp = transparency
+    if type(color1) is tuple:
+        color2 = color1[1]
+        color1 = color1[0]
+    else:
+        color1 = color1
+        color2 = color1
+
     vec_kn = k - n
     vec_kp = k - p
     half_ring = center.distance(u) / (-2 * k.distance(p))
@@ -1457,36 +1523,53 @@ def hexagon(center, n, p, k, u, size, color1, name, transparency=0):
         back_6=vec_back + outer[5],
         center_1=vec_for + ((vec_kp * half_ring) + center),
         center_2=vec_back + ((vec_kp * half_ring) + center),
-        color1=color1,
+        color1=color1,color2=color2,
         tp=tp,
     )
+
+    vec32 = (color_and_points['front_3'] - color_and_points['front_2']) / 3
+
+    mid_1 = vec32 + color_and_points['front_2']
+    mid_2 = vec32 + color_and_points['front_6']
+    mid_3 = vec32 + color_and_points['back_2']
+    mid_4 = vec32 + color_and_points['back_6']
+
+    color_and_points.update(dict(mid_1=mid_1,mid_2=mid_2,mid_3=mid_3,mid_4=mid_4))
+    
+
     bild = """
     .color {color1}
     .transparency {tp}
-    .polygon {front_1} {front_2} {center_1}
-    .polygon {front_1} {center_1} {front_6}
-    .polygon {front_3} {center_1} {front_2}
-    .polygon {front_3} {front_4} {center_1}
-    .polygon {front_5} {center_1} {front_4}
-    .polygon {front_5} {front_6} {center_1}
-    .polygon {back_1} {center_2} {back_2}
-    .polygon {back_1} {back_6} {center_2}
-    .polygon {back_3} {back_2} {center_2}
-    .polygon {back_3} {center_2} {back_4}
-    .polygon {back_5} {back_4} {center_2}
-    .polygon {back_5} {center_2} {back_6}
-    .polygon {back_1} {back_2} {front_1}
-    .polygon {back_2} {front_2} {front_1}
-    .polygon {back_2} {back_3} {front_2}
-    .polygon {back_3} {front_3} {front_2}
-    .polygon {back_3} {back_4} {front_3}
-    .polygon {back_4} {front_4} {front_3}
+    .polygon {mid_1} {mid_2} {front_3}
+    .polygon {mid_2} {front_3} {front_5}
+    .polygon {front_3} {front_4} {front_5}
+    .polygon {mid_3} {mid_4} {back_3}
+    .polygon {mid_4} {back_3} {back_5}
+    .polygon {back_3} {back_4} {back_5}
+    .polygon {mid_1} {mid_3} {back_3}
+    .polygon {mid_1} {back_3} {front_3}
+    .polygon {mid_3} {mid_4} {back_5}
+    .polygon {mid_2} {back_5} {front_5}
+    .polygon {mid_2} {mid_4} {back_5}
+    .polygon {front_3} {front_4} {back_3}
+    .polygon {back_3} {back_4} {front_4}
+    .polygon {front_4} {front_5} {back_5}
     .polygon {back_4} {back_5} {front_4}
-    .polygon {back_5} {front_5} {front_4}
-    .polygon {back_5} {back_6} {front_5}
-    .polygon {back_6} {front_6} {front_5}
-    .polygon {back_6} {back_1} {front_6}
-    .polygon {back_1} {front_1} {front_6}
+    .color {color2}
+    .polygon {front_1} {front_2} {front_6}
+    .polygon {back_1} {back_2} {back_6}
+    .polygon {front_6} {front_2} {mid_1}
+    .polygon {front_6} {mid_1} {mid_2}
+    .polygon {back_6} {back_2} {mid_3}
+    .polygon {back_6} {mid_3} {mid_4}
+    .polygon {front_1} {front_6} {back_1}
+    .polygon {front_6} {back_6} {back_1}
+    .polygon {front_1} {front_2} {back_1}
+    .polygon {front_2} {back_2} {back_1}
+    .polygon {front_6} {mid_2} {mid_4}
+    .polygon {front_6} {back_6} {mid_4}
+    .polygon {front_2} {mid_1} {mid_3}
+    .polygon {front_2} {back_2} {mid_3}
     """.format(
         **color_and_points
     )
@@ -1503,54 +1586,3 @@ def add_vrml_model(vrml_string, name):
         chimera.openModels.add(vrml)
         return vrml
 
-
-
-"""
-def detect_xform_change():
-    chimera._xform_change = chimera.triggers.addHandler('OpenState', _OpenState_response, chimera.openModels.list()[0])
-
-
-def undetect_xform_change():
-    if hasattr(chimera, "_xform_change"):
-        chimera.triggers.deleteHandler("OpenState", chimera._xform_change)
-        del chimera._xform_change
-
-
-def _OpenState_response(trigName, myData, trigData):
-    return myData.openState.xform 
-    
-
-def key_coords(res, a1, a2=None, a3=None, xform_change=None):
-    if a2:
-        if a3:
-            for at in res.atoms:
-                if at.name == a1:
-                    atom1 = at.coord()
-                elif at.name == a2:
-                    atom2 = at.coord()
-                elif at.name == a3:
-                    atom3 = at.coord()
-            if xform_change:
-                return xform_change.apply(atom1), xform_change.apply(atom2), xform_change.apply(atom3)
-            else:
-                return atom1, atom2, atom3
-        else:
-            for at in res.atoms:
-                if at.name == a1:
-                    atom1 = at.coord()
-                elif at.name == a2:
-                    atom2 = at.coord()
-            if xform_change:
-                return xform_change.apply(atom1), xform_change.apply(atom2)
-            else:
-                return atom1, atom2
-    else:
-        for at in res.atoms:
-            if at.name == a1:
-                atom1 = at.coord()
-        if xform_change:
-            return xform_change.apply(atom1)
-        else:
-            return atom1
-
-"""
