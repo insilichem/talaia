@@ -152,7 +152,7 @@ AMINOACIDS = {
         figure="triangle",
         size=3.4,
         color1="aquamarine",
-        color2="blue",
+        color2=("blue", "red"),
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "OD1", "ND2"],
         k="CA",
         n="CG",
@@ -164,7 +164,7 @@ AMINOACIDS = {
         figure="triangle",
         size=3.4,
         color1="aquamarine",
-        color2="blue",
+        color2=("blue", "red"),
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "CD", "OE1", "NE2"],
         k="CB",
         n="CD",
@@ -225,7 +225,7 @@ AMINOACIDS = {
         figure="triangle",
         size=3.4,
         color1="red",
-        color2="dark red",
+        color2=("dark red", "dark red"),
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "OD1", "OD2"],
         k="CA",
         n="CG",
@@ -237,7 +237,7 @@ AMINOACIDS = {
         figure="triangle",
         size=3.4,
         color1="red",
-        color2="dark red",
+        color2=("dark red", "dark red"),
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "CD", "OE1", "OE2"],
         k="CB",
         n="CD",
@@ -433,6 +433,9 @@ def callback(name, data, changes):
 
 def proton_eval(residue):
     """
+    Identify protonation state of Histidine residues.
+    Returns value between 0 and 2, used to determine colour
+    of histidine pentagon according to protonation.
     """
     ct = 0
     h_ct = 0
@@ -956,13 +959,13 @@ def triangle(n, p, k, u, size, color1, color2, transparency, name):
     color depending on residue type.
     """
     n = Point(*n)
-    p = Point(*p)
+    p = Point(*p)  # O
     k = Point(*k)
-    u = Point(*u)
+    u = Point(*u)  # N
     tp = transparency
     # create two vectors and adapt their length to calculate center point.
     vec_nk = n - k
-    vec_pu = p - u
+    vec_pu = p - u  # amide vector
     half_length = size / 2.0
     thickness = size / 6.0
     adjustment_nk = half_length / k.distance(n)
@@ -991,6 +994,11 @@ def triangle(n, p, k, u, size, color1, color2, transparency, name):
         d1=perp_for + x1,
         d2=perp_back + x1,
     )
+    print(points)
+
+    # unpack base colors
+    color21 = color2[0]
+    color22 = color2[1]
 
     bild = """
     .color {color1}
@@ -999,19 +1007,20 @@ def triangle(n, p, k, u, size, color1, color2, transparency, name):
     .polygon {s2} {s3} {s4}
     .polygon {s1} {s2} {s5}
     .polygon {s2} {s6} {s5}
-    .color {color2}
+    .color {color22}
     .polygon {s6} {s5} {d1}
     .polygon {s6} {d1} {d2}
-    .color {color2}
+    .color {color21}
     .polygon {s3} {d2} {d1}
     .polygon {s3} {s4} {d2}
     .color {color1}
     .polygon {s1} {s3} {s5}
     .polygon {s2} {s4} {s6}
     """.format(
-        color1=color1, color2=color2, tp=tp, **points
+        color1=color1, color22=color22, color21=color21, tp=tp, **points
     )
     add_vrml_model(bild, "triangle_" + name)
+    return(points)
 
 
 def cone(center, n, p, size, color1, color2, name, transparency=0):
