@@ -119,7 +119,7 @@ AMINOACIDS = {
         figure="cone",
         size=3.4,
         color1="aquamarine",
-        color2="red",
+        color2="dark red",
         all_atoms=["N", "CA", "O", "C", "CB", "OG"],
         center="OG",
         n="CA",
@@ -130,7 +130,7 @@ AMINOACIDS = {
         figure="cone",
         size=3.4,
         color1="aquamarine",
-        color2="red",
+        color2="dark red",
         all_atoms=["N", "CA", "O", "C", "CB", "OG1", "CG2"],
         center="OG1",
         n="CA",
@@ -152,7 +152,7 @@ AMINOACIDS = {
         figure="triangle",
         size=3.4,
         color1="aquamarine",
-        color2=("blue", "red"),
+        color2=("blue", "dark red"),
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "OD1", "ND2"],
         k="CA",
         n="CG",
@@ -164,7 +164,7 @@ AMINOACIDS = {
         figure="triangle",
         size=3.4,
         color1="aquamarine",
-        color2=("blue", "red"),
+        color2=("blue", "dark red"),
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "CD", "OE1", "NE2"],
         k="CB",
         n="CD",
@@ -175,7 +175,7 @@ AMINOACIDS = {
         name="TYR",
         figure="hexagon",
         size=3.4,
-        color1=("aquamarine", "red"),
+        color1=("aquamarine", "dark red"),
         all_atoms=[
             "N",
             "CA",
@@ -258,7 +258,7 @@ AMINOACIDS = {
         name="HIS",
         figure="pentagon",
         size=3.4,
-        color1=["blue", "aquamarine", "red"],
+        color1=["blue", "aquamarine", "dark red"],
         all_atoms=["N", "CA", "C", "O", "CB", "CG", "ND1", "CD2", "CE1", "NE2"],
         center="CG",
         n="CB",
@@ -268,7 +268,7 @@ AMINOACIDS = {
     ),
 }
 
-ALTERNATIVE_NAME = {"CYX": "CYS", "HIE": "HIS", "HE1": "HIS", "CS1": "CYS"}
+ALTERNATIVE_NAME = {"CYX": "CYS", "HIE": "HIS", "HE1": "HIS", "CS1": "CYS", "HID": "HIS"}
 
 IONS_AND_METALS = ["MG", "NI", "PT1", "K", "CA", "NA", "F"]
 
