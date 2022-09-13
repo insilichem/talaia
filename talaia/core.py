@@ -9,6 +9,7 @@ Simplistic 3D dictionary of amino acids using geometric shapes
 for UCSF Chimera.
 """
 import argparse
+from time import sleep as sleep
 from collections import defaultdict
 from textwrap import dedent
 import math
@@ -268,11 +269,41 @@ AMINOACIDS = {
     ),
 }
 
-ALTERNATIVE_NAME = {"CYX": "CYS", "HIE": "HIS", "HE1": "HIS", "CS1": "CYS", "HID": "HIS"}
+ALTERNATIVE_NAME = {"CYX": "CYS", "HIE": "HIS", "HE1": "HIS", "CS1": "CYS", "HID": "HIS", "HIC": "HIS"}
 
 IONS_AND_METALS = ["MG", "NI", "PT1", "K", "CA", "NA", "F"]
 
 all_refreshing = []
+
+
+class BalloonPopup:
+    """
+    CLass to add popup custom balloon for vrml models.
+    """
+    def __init__(self, info):
+        """
+        info: value to show on popup balloon.
+        """
+        self.info = info
+    
+    def oslIdent(self):
+        """
+        return popup balloon message
+        """
+        return self.info
+
+
+
+def extract_residue_message(res):
+    """
+    Create custom message for popup balloon for vrml models.
+    """
+    chain = res.id.chainId
+    res_type = res.type
+    pos = res.id.position
+    message = res.type + " " + str(pos) + "." + chain
+    return message
+
 
 
 def enable(selection=None, transparency=0):
@@ -296,6 +327,7 @@ def enable(selection=None, transparency=0):
         nearRes = selection
     complete_residues(nearRes)
     for res in nearRes:
+        message = extract_residue_message(res)
         res_info = AMINOACIDS.get(res.type)
         if res_info is None:
             if res.type in ALTERNATIVE_NAME.keys():
@@ -337,22 +369,23 @@ def enable(selection=None, transparency=0):
                 u = res.atomsMap[res_info["u"]][0].coord()
 
             if shape == "sphere":
-                shapecmd.sphere_shape(radius=r1, center=q, color=(0, 1, 0, 1 - tp))
+                sph = shapecmd.sphere_shape(radius=r1, center=q, color=(0, 1, 0, 1 - tp))
+                sph.molecule = BalloonPopup("#? " + message)
             elif shape == "ellipsoid":
-                ellipsoid(k, n, tp)
+                ellipsoid(k, n, message, tp)
             elif shape == "triangle":
-                triangle(n, p, k, u, r1, color1, color2, tp, name)
+                triangle(n, p, k, u, r1, color1, color2, tp, name, message)
             elif shape == "cone":
-                cone(center, n, p, r1, color1, color2, name, tp)
+                cone(center, n, p, r1, color1, color2, name, message, tp)
             elif shape == "cube":
-                cube(center, n, p, r1, color1, name, tp)
+                cube(center, n, p, r1, color1, name, message, tp)
             elif shape == "rectangle":
-                rectangle(center, n, p, k, r1, color1, color2, name, tp)
+                rectangle(center, n, p, k, r1, color1, color2, name, message, tp)
             elif shape == "pentagon":
-                pentagon(center, n, p, k, r1, color1, rt, name, tp)
+                pentagon(center, n, p, k, r1, color1, rt, name, message, tp)
             elif shape == "hexagon":
-                hexagon(center, n, p, k, u, r1, color1, name, tp)
-
+                hexagon(center, n, p, k, u, r1, color1, name, message, tp)
+            
             opened = chimera.openModels.list()
             key = 'refreshing_' + str(res.id)
             key = dict(
@@ -843,7 +876,7 @@ def complete_residues(residues):
                 Rotamers.useBestRotamers(res.type, res_incomplete)
 
 
-def ellipsoid(k, n, transparency=0):
+def ellipsoid(k, n, message, transparency=0):
     """
     Used for residues V, L, I, M.
     Define ellipsoids orientation following residue's side chains.
@@ -885,12 +918,14 @@ def ellipsoid(k, n, transparency=0):
             or abs(dotproduct(vrot, u_vec_kn)) > 1.0001
     ):
         y = -1 * y
-    shapecmd.sphere_shape(
-        radius=(2, 1, 1), center=q, rotation=(x, y, z, theta), color=(0, 1, 0, tp)
+    ellip = shapecmd.sphere_shape(
+            radius=(2, 1, 1), center=q, rotation=(x, y, z, theta),
+            color=(0, 1, 0, tp)
     )
+    ellip.molecule = BalloonPopup("#? " + message)
 
 
-def cube(center, n, p, size, color1, name, transparency=0):
+def cube(center, n, p, size, color1, name, message, transparency=0):
     """
     Used for resiude P.
     Define a white cubic shape from three atom coordinates.
@@ -949,10 +984,10 @@ def cube(center, n, p, size, color1, name, transparency=0):
     """.format(
         color1=color1, tp=tp, **points
     )
-    add_vrml_model(bild, "cube_" + name)
+    add_vrml_model(bild, "talaia " + message, message)
 
 
-def triangle(n, p, k, u, size, color1, color2, transparency, name):
+def triangle(n, p, k, u, size, color1, color2, transparency, name, message):
     """
     Used for residues E, D, Q, N.
     Define oriented orange triangle with one side of different
@@ -1019,11 +1054,11 @@ def triangle(n, p, k, u, size, color1, color2, transparency, name):
     """.format(
         color1=color1, color22=color22, color21=color21, tp=tp, **points
     )
-    add_vrml_model(bild, "triangle_" + name)
+    add_vrml_model(bild, "talaia " + message, message)
     return(points)
 
 
-def cone(center, n, p, size, color1, color2, name, transparency=0):
+def cone(center, n, p, size, color1, color2, name, message, transparency=0):
     """
     Used for residues S, T, C.
     Defines an orange 3-base pyramid with vertex pointing to OH/SH
@@ -1093,10 +1128,10 @@ def cone(center, n, p, size, color1, color2, name, transparency=0):
     .polygon {x4} {mid1} {mid3}
     """.format(**color_and_points)
 
-    add_vrml_model(bild, "cone_" + name)
+    add_vrml_model(bild, "talaia " + message, message)
 
 
-def rectangle(center, n, p, k, size, color1, color2, name, transparency=0):
+def rectangle(center, n, p, k, size, color1, color2, name, message, transparency=0):
     """
     Used for residues K and R.
     Describe a blue rectangle placed on the end of the residue side chain
@@ -1181,7 +1216,7 @@ def rectangle(center, n, p, k, size, color1, color2, name, transparency=0):
     """.format(
         **color_and_points
     )
-    add_vrml_model(bild, "rectangle_" + name)
+    add_vrml_model(bild, "talaia " + message, message)
 
 
 def ion_star(center, size, color1, transparency=0):
@@ -1361,7 +1396,7 @@ def star(center, n, p, size, color1, transparency=0):
     add_vrml_model(bild, "star")
 
 
-def pentagon(center, n, p, k, size, color1, rt, name, transparency=0):
+def pentagon(center, n, p, k, size, color1, rt, name, message, transparency=0):
     """
     Used for residues H and W.
     Describe a pentagon shape placed on top of the side chain's residue.
@@ -1438,10 +1473,10 @@ def pentagon(center, n, p, k, size, color1, rt, name, transparency=0):
     """.format(
         **color_and_points
     )
-    add_vrml_model(bild, "pentagon_" + name)
+    add_vrml_model(bild, "talaia " + message, message)
 
 
-def hexagon(center, n, p, k, u, size, color1, name, transparency=0):
+def hexagon(center, n, p, k, u, size, color1, name, message, transparency=0):
     """
     Used for residues F and Y.
     Describe a hexagon shape placed on the residues ring. Colour depends
@@ -1549,15 +1584,17 @@ def hexagon(center, n, p, k, u, size, color1, name, transparency=0):
     """.format(
         **color_and_points
     )
-    add_vrml_model(bild, "hexagon_" + name)
+    add_vrml_model(bild, "talaia " + message, message)
 
 
-def add_vrml_model(vrml_string, name):
+def add_vrml_model(vrml_string, name, message, prefix_msg="#? "):
     """
+    create vrml model from bild string
     """
     f = StringIO(dedent(vrml_string))
     try:
         vrml = openBildFileObject(f, "<string>", "vrml_" + name)
+        vrml[0].molecule = BalloonPopup(prefix_msg + message)
     except chimera.NotABug:
         print vrml_string
     else:
