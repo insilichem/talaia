@@ -413,6 +413,7 @@ def disable():
                 item.name.startswith("vrml_")
                 or item.name == "ellipsoid"
                 or item.name == "sphere"
+                or item.name == "cylinder"
         ):
             chimera.openModels.close([item])
         if hasattr(item, "_depicted"):
@@ -887,6 +888,39 @@ def ellipsoid(k, n, message, transparency=0):
     vec_kn = k - n
     center = (vec_kn * 0.5) + n
     q = preparation(center)
+    tp = 1 - transparency
+    xvec = Vector(1, 0, 0)
+
+    x, y, z, theta = shapecmd_rotation(vec_kn, xvec)
+    
+    ellip = shapecmd.sphere_shape(
+            radius=(2, 1, 1), center=q, rotation=(x, y, z, theta),
+            color=(0, 1, 0, tp)
+    )
+    ellip.molecule = BalloonPopup("#? " + message)
+    if "MET" in message:
+        zvec = Vector(0, 0, 1)
+        x2, y2, z2, theta2 = shapecmd_rotation(vec_kn, zvec)
+        center = preparation(n)
+        cyl = shapecmd.cylinder_shape(radius=0.9, height=0.7, slab=0.1,
+                                      center=center,
+                                      rotation=(x2,y2,z2,theta2),
+                                      color=(1,1,0,tp))
+        cyl.molecule = BalloonPopup("#? " + message)
+        
+
+
+def ellipsoid_old(k, n, message, transparency=0):
+    """
+    Used for residues V, L, I, M.
+    Define ellipsoids orientation following residue's side chains.
+    """
+    # calculate center coordinates with vector between k and n points.
+    k = Point(*k)
+    n = Point(*n)
+    vec_kn = k - n
+    center = (vec_kn * 0.5) + n
+    q = preparation(center)
 
     tp = 1 - transparency
     xvec = Vector(1, 0, 0)
@@ -923,6 +957,43 @@ def ellipsoid(k, n, message, transparency=0):
             color=(0, 1, 0, tp)
     )
     ellip.molecule = BalloonPopup("#? " + message)
+
+
+def shapecmd_rotation(vec, ref_vec):
+    """
+    purpose: to calculate rotation vector and angle for ellipsoids and cylinders
+        acording to the main vector of the residue in question and the 
+        reference vector necessary (ellipsoids:xvec, cylinders:zvec)
+    both arguments must be chimera Vector objects.
+    output is values x, y, z and theta to pass as the rotation argument for the shapecmd functions
+    """
+    cos_theta = dotproduct(ref_vec, vec) / length(vec) * (length(ref_vec))
+    sin_theta = math.sqrt(1 - (cos_theta ** 2))
+    theta = math.degrees(math.acos(cos_theta))
+    # calculate rotation vector and convert it to a unit vector
+    x, y, z = vectorial_product(ref_vec, vec)
+    rot_vec = Vector(x, y, z)
+    u_rot_vec = rot_vec * (1 / length(rot_vec))
+
+    # Apply Rodrigues rotation formula:
+    # vrot = a + b + c =
+    #      = v * cos_theta + (k x v) * sin_theta + k * (k dot v) * (1 - cos_theta)
+    a = ref_vec * cos_theta
+    vp = vectorial_product(u_rot_vec, ref_vec)
+    vproduct = Vector(vp[0], vp[1], vp[2])
+    b = vproduct * sin_theta
+    c = u_rot_vec * dotproduct(u_rot_vec, ref_vec) * (1 - cos_theta)
+    vrot = a + b + c
+
+    # Check if vrot is paralel to vec: Dot product = 1
+    # If dotproduct != 1 neet to change y component sign.
+    u_vec = vec * (1 / length(vec))
+    if (
+            abs(dotproduct(vrot, u_vec)) < 0.999999
+            or abs(dotproduct(vrot, u_vec)) > 1.0001
+    ):
+        y = -1 * y
+    return x, y, z, theta
 
 
 def cube(center, n, p, size, color1, name, message, transparency=0):
