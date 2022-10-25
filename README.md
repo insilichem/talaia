@@ -1,29 +1,40 @@
-# TALAIA
+# TALAIA: a visual dictionary for proteins 3D representation
+
+![preview](https://user-images.githubusercontent.com/33349331/195623980-5d61567d-ab7f-41f6-a381-201c72f03744.png)
+
+Originally developed by Mercè Alemany and J.-D. Maréchal.
 
 
-Simplistic 3D dictionary of amino acids using geometric shapes.
+Installation
+-----
 
-Originally developed by Mercè Alemany.
+To use Talaia, you will first need to have UCSF Chimera installed.
+Chimera can be downloaded free of charge for academic, government, non-profit and personal use at their website https://www.cgl.ucsf.edu/chimera/download.html.
+
+Once UCSF Chimera is installed, add Talaia as a third-party plugin. To do so, in Chimera, go to the `Favorites/Add to Favorites` menu and add the Talaia's project location in your computer.
+
 
 Usage
 -----
 
-From the UCSF Chimera command-line (enable only):
+At the moment, Talaia can only be used in its command-line version. Make sure you have UCSF Chimera command line activated, if not, go to menu `Favorites/Command Line`.
 
-Talaia expects a Chimera selection to work with. By default (none
-provided), it will select ligands and everything within 8A. You
-can change this with `spec`:
+Talaia expects a Chimera selection to work with. If none is provided, by default it will select ligands and every residue within 8A.
 
+For custom selections the word spec can be used.
 ```
-# Default behaviour (ligand zr < 8)
+# Default behaviour (equivalent to talaia spec ligand zr < 8)
 
 talaia
 
-# Custom selections
+
+# Representation of the entire system
 
 talaia spec all
 
-# Use sel for complex selections or quote it
+
+# Representation of given selections
+
 sel :HIS zr < 8
 talaia spec sel
 
@@ -33,4 +44,4 @@ talaia spec sel
 talaia transparency 0.5
 ```
 
-To disable depictions, use `~talaia`.
+To disable all Talaia's depictions, use `~talaia`.
