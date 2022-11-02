@@ -1100,7 +1100,6 @@ def triangle(n, p, k, u, size, color1, color2, transparency, name, message):
         d1=perp_for + x1,
         d2=perp_back + x1,
     )
-    print(points)
 
     # unpack base colors
     color21 = color2[0]
