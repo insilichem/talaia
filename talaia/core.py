@@ -392,11 +392,16 @@ def enable(selection=None, transparency=0):
                 residue=res,
                 name=name,
                 shape=shape,
-                model=opened[len(opened)-1],
                 frames=dict(ref_center=detect_type(res, name)[0],
                             ref_points=detect_type(res, name)[1],
                             vec2=None)
             )
+            # As MET has 2 models associated, both need to be added to all_refreshing so MD works properly
+            if name == "MET":
+                key_met = key.copy()
+                key_met["model"]=opened[-2]
+                all_refreshing.append(key_met)
+            key["model"] = opened[-1]
             all_refreshing.append(key)
 
     subscribe_events()
@@ -906,8 +911,8 @@ def ellipsoid(k, n, message, transparency=0):
                                       center=center,
                                       rotation=(x2,y2,z2,theta2),
                                       color=(1,1,0,tp))
-        cyl.molecule = BalloonPopup("#? " + message)
-        
+        cyl.molecule = BalloonPopup("#? " + message)      
+
 
 
 def ellipsoid_old(k, n, message, transparency=0):
