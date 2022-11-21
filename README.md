@@ -45,3 +45,16 @@ talaia transparency 0.5
 ```
 
 To disable all Talaia's depictions, use `~talaia`.
+
+# Talaia's representation for MD trajectories
+
+To make Talaia's work on a MD trajectory for all frames, one procedure is:
+
+1. load the MD trajectory using the UCSF Chimera option (Tools-->MD ensemble/Analysis --> MD movie)
+2. in the MD movie widget, go to "per frame"
+3. copy the script:
+~talaia
+sel (define your selection in chimera's language)
+talaia spec sel
+
+
