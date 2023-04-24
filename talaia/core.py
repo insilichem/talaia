@@ -305,6 +305,17 @@ def extract_residue_message(res):
     return message
 
 
+def get_star_atom_names(res):
+    """
+    get center, n and p atom names to build star for non-standard residues
+    """
+    print('entrada get atom names')
+    clist = sorted([atom for atom in res.atoms if atom.name.startswith('C') and atom.name != 'C'])
+    c = clist[0]
+    n = c.neighbors[0]
+    p = c.neighbors[1]
+    return c, n, p
+
 
 def enable(selection=None, transparency=0):
     """
@@ -316,6 +327,7 @@ def enable(selection=None, transparency=0):
     	Chimera specification query or list of residues
     transparency: float
     """
+    print('entrada0')
     if selection is None:
         nearRes = (
             chimera.specifier.evalSpec("ligand zr < 8").residues()
@@ -327,18 +339,32 @@ def enable(selection=None, transparency=0):
         nearRes = selection
     complete_residues(nearRes)
     for res in nearRes:
+        print('entrada1')
         message = extract_residue_message(res)
         res_info = AMINOACIDS.get(res.type)
         if res_info is None:
+            print('entrada2')
             if res.type in ALTERNATIVE_NAME.keys():
                 alt_name = ALTERNATIVE_NAME.get(res.type)
                 res_info = AMINOACIDS.get(alt_name)
-            elif res.isMetal or res.isHet:
+            elif res.isMetal:
+                print('entrada3')
                 continue
+            elif res.type not in AMINOACIDS.keys() and not res.isIsolated:
+                print('entrada condicional')
+                name = res.type
+                center, n, p = get_star_atom_names(res)
+                size = 3
+                color = "orange"  # "dim gray"
+                print(center.coord(), n.coord(), p.coord(), size, color, name, message, transparency)
+                star(center.coord(), n.coord(), p.coord(), size, color, name, message, transparency)
+                print('entrada 10000')            
             else:
+                print('entrada4')
                 if "CA" not in res.atomsMap:
                     center = res.atoms[0].coord()
                     continue
+        print('entrada5')
         if res.type == 'HIS':
             rt = proton_eval(res)
         rt = proton_eval(res)
@@ -1385,7 +1411,7 @@ def ion_star(center, size, color1, transparency=0):
     add_vrml_model(bild, "ion_star")
 
 
-def star(center, n, p, size, color1, transparency=0):
+def star(center, n, p, size, color1, name, message, transparency=0):
     """
     Used for residues out of AMINOACIDS dictionary and ALTERNATIVE_NAMES
     dictionary that are not HETATM (solvent, metal, ligand, cofactor).
@@ -1395,11 +1421,13 @@ def star(center, n, p, size, color1, transparency=0):
     center = Point(*center)
     p = Point(*p)
     tp = transparency
+    print('entrada star1')
 
     vec_AB = n - center
     shape_size = size * 1.5
     half_length = shape_size / 2.0
     thickness = shape_size / 4.0
+    print('entrada star2')
 
     adjustment = half_length / center.distance(n)
     adj_vec_AB_1 = adjustment * vec_AB
@@ -1468,7 +1496,7 @@ def star(center, n, p, size, color1, transparency=0):
     """.format(
         **color_and_points
     )
-    add_vrml_model(bild, "star")
+    add_vrml_model(bild, "talaia " + message, message)
 
 
 def pentagon(center, n, p, k, size, color1, rt, name, message, transparency=0):
