@@ -8,7 +8,7 @@ To use TALAIA for UCSF Chimera you only need to:
 ![menu_favourites](https://user-images.githubusercontent.com/63212606/234820955-c83f2c35-323d-4cec-b83c-eda7264dc63e.PNG)
 
 - Add a new third-party plugin location. Here you have to make sure to select the directory where the project is found, not the content of the directory. Save the new added location.
-- 
+
 ![install_add_location_marcat_2](https://user-images.githubusercontent.com/63212606/234833893-e21aafaa-caad-4f70-8db9-de7b057933d6.PNG)
 
 - As TALAIA only works through command line, you will need to activate it if it does not appear at the bottom of the Chimera window. In order to do so you have to go to Favorites -> Command line.
