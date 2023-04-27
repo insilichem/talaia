@@ -3,6 +3,9 @@
 To use TALAIA for UCSF Chimera you only need to:
 - Have UCSF Chimera installed. You can download it from https://www.cgl.ucsf.edu/chimera/download.html. If it is your first time using UCSF Chimera you can find information here you'll find information on how it works: https://www.cgl.ucsf.edu/Outreach/Tutorials/GettingStarted.html.
 - Download the TALAIA project from this repository
+![install_download_talaia_fro github_marcat](https://user-images.githubusercontent.com/63212606/234835874-5e6f2524-4ad3-41fb-ae4e-2794bbbf46a4.png)
+
+
 - Initialize UCSF Chimera program
 - Go to the menu Favorites -> Add to Favorites/Toolbar...
 ![menu_favourites](https://user-images.githubusercontent.com/63212606/234820955-c83f2c35-323d-4cec-b83c-eda7264dc63e.PNG)
