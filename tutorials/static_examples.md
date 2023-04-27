@@ -51,21 +51,36 @@ The model looks like this now:
 
 ## 3 - Histidine representation according to protonation state
 TALAIA takes into consideration the protonation state of the Histidine residues. They can be represented with 3 different colors, but for that you need to first make sure the model you are using has Hydrogens.
-To see this, we are going to use a Cu/Zn Dismutase (PDB code: ????).
+To see this, we are going to use a Cu/Zn Dismutase (PDB code: 1to5).
 
 - Open the protein model with the command `open 1to5`.
 - Select the residues 721 and 722 with the command `sel :711,712` and focus with `focus sel`.
 - Select the Histidine residues using `sel :His` and represent their TALAIA models with `talaia spec sel transparency 0.5`. The resulting figures will be all of the same aquamarine color associated to polar residues without charge.
 
+![static_exemple3_histidine_representations](https://user-images.githubusercontent.com/63212606/234997489-25ebe5b1-f904-427d-b00a-8ffcd5f5bfc6.PNG)
+
 To represent the Histidines according to their protonation state first we need to add the hydrogens. To do so we follow the next steps:
-- Run `~talaia`to remove all the current TALAIA representations.
+- Run `~talaia` to remove all the current TALAIA representations.
 - Run `addh` to add the hydrogen atoms to the whole model.
 - Run `talaia spec sel transparency 0.5` again, when you have Histidines selected.
 The result of this will look similar to:
+
+![static_exemple3_histidine_representations_withH](https://user-images.githubusercontent.com/63212606/234997528-91327fda-0307-4f14-83be-0bdd3a1fb721.PNG)
 
 
 ## 4 - Non-standard residue treatment in TALAIA
 Non-standard residues are diverse and difficult to treat in a unified manner. 
 In TALAIA the non-standard residues that are bonded covalently to the backbone of the protein will be represented with a star shape placed on top of the Carbon alpha. 
 The rest of the small molecules often present in PDB structures, like ligands, solvents, etc. will be ignored.
+To exemplify the treatment of non-standard residues we are going to use as example the PDB structure of allophycocyanin. (PDB code: 6yx7)
 
+- Run the command `open 6xy7` to open the model in Chimera.
+- Select the residue MEN, a modified residue derived from ASN, with `sel :men`.
+- To see at atom level only the side chain of the MEN residues run while you have them selected the command `show sel`. This will hide every other atomic structure of the model.
+- Run `sel sel zr < 5` to select all the residues in proximity of 5 Arg from the original selection.
+- Run `talaia spec sel` to represent every residue selected with TALAIA. It will look similiar to the picture below.
+
+
+![static_example4_target_men_sphere5_talaia](https://user-images.githubusercontent.com/63212606/234998728-f21d33b2-7ef1-4823-8774-41e41472779e.PNG)
+
+In this protein structure there are several non-standard residues, but only MEN and CYC will be recognized and graphically represented by TALAIA as these are the only ones tethered to the protein chain.
