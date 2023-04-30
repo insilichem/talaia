@@ -1,9 +1,10 @@
-# How to use TALAIA on static sutructures
+# How to use TALAIA on static structures
 
 ## 1 - Inner pore of a Potassium Channel
-Here we will represent with TALAIA the residues of the inner pore of a potassiu channel (PDB code: 6eo1).
 
-- Execute command `open 6eo1` from the command line. The model opens as follows.
+TALAIA is used to depict the inner residues of the pore of a potassium channel as presented in the corresponding manuscript (PDB code: 6eo1).
+
+- In the command line, execute  `open 6eo1`. The pdb file will be downloaded and model depicted.
 
 ![static_example1_asopen](https://user-images.githubusercontent.com/63212606/234840722-50d9834d-e1f5-4b11-9b7a-8228276e3bdf.PNG)
 
@@ -14,7 +15,7 @@ Here we select only the pore region, taking advantage of the initial orientation
 ![statis_example1_selection_howto_2](https://user-images.githubusercontent.com/63212606/234841986-f94ce56d-175f-4b64-a052-8114ec0a6c2e.png)
 
 
-- Call `talaia spec sel` from the command line. This will represent the TALAIA's figures for every residue selected.
+- run `talaia spec sel` from the command line. This will represent the TALAIA's figures for every residue selected.
 
 ![statis_example1_selection_talaia](https://user-images.githubusercontent.com/63212606/234841297-eaf85eae-48a2-4567-bb73-420097a41cc7.PNG)
 
@@ -25,8 +26,7 @@ Here we select only the pore region, taking advantage of the initial orientation
 
 
 ## 2 - Binding site of Vitamin D receptor
-Another way to use TALAIA might be to represent the character of the binding site of a receptor.
-We are now going to visualize the Vitamin D receptor (PDB code: 5xzf).
+We are now going to visualize a Vitamin D receptor (PDB code: 5xzf).
 
 - Open the 5xzf model in Chimera running the command `open 5xzf`.
 
