@@ -11,7 +11,9 @@ Originally developed by Mercè Alemany and J.-D. Maréchal.
 Intalling TALAIA in UCSF Chimera is very easy and quick. You will need to follow these steps:
 
 1. You need UCSF Chimera installed if not download it from https://www.cgl.ucsf.edu/chimera/download.html. 
-If it is your first time using UCSF Chimera you can find information here: https://www.cgl.ucsf.edu/Outreach/Tutorials/GettingStarted.html. There is also plenty of tutorials. Beware, that TALAIA has been developed under UCSF Chimera (which stands on Python 2). Deployments for ChimeraX (Python 3) are not yet finalized.
+If it is your first time using UCSF Chimera you can find information here: https://www.cgl.ucsf.edu/Outreach/Tutorials/GettingStarted.html. There is also plenty of tutorials.
+
+Beware, that TALAIA has been developed under UCSF Chimera (which stands on Python 2). Deployments for ChimeraX (Python 3) are not yet finalized.
 
 2. Download TALAIA from the insilichem's Github repository. You can either clone it or download it as ZIP.
 
@@ -116,6 +118,7 @@ The model looks like this now:
 ![static_example2_talaia_noribbon](https://user-images.githubusercontent.com/63212606/234845647-d078eeb7-9885-41a0-96b0-9b2331d2eb0e.PNG)
 
 
+
 Example 3 - Histidine representation according to protonation state
 -----
 
@@ -135,6 +138,7 @@ To represent the Histidines according to their protonation state first we need t
 The result of this will look similar to:
 
 ![static_exemple3_histidine_representations_withH](https://user-images.githubusercontent.com/63212606/234997528-91327fda-0307-4f14-83be-0bdd3a1fb721.PNG)
+
 
 
 Example 4 - Non-standard residue treatment in TALAIA
@@ -160,12 +164,42 @@ In this protein structure there are several non-standard residues, but only MEN 
 
 # Talaia's representation for MD trajectories
 
-To make Talaia's work on a MD trajectory for all frames, one procedure is:
+TALAIA can be used for MD trajectories aswell. To exemplify how to do it we are going to use a trajectory where insulin is interacting with oxaliplatin [1]. Due to this interaction one of the disulphide bridges of the insulin is broken, thus allowing structural changes to the protein structure. With TALAIA we can visualize the forces driving the conformational change along the trajectory.
+
+One way to use TALAIA for MD trajectories is to:
+
+- Load the MD trajectory using UCSF Chimera option from the menu Tools -> MD ensable/Analysis -> MDMovie
+
+![movie_example5_menu_mdmovie2](https://user-images.githubusercontent.com/63212606/235442837-7971d28e-2743-4f21-b7b0-885a7f4d85fd.PNG)
+
+- Load the trajectory selecting the specific format you are using. In this example we have a prmtop and a dcd files.
+
+![movie_example5_mdmoview_file_options](https://user-images.githubusercontent.com/63212606/235442979-085966b9-19dd-4f85-811d-9b5116bf11ec.PNG)
+
+- Once you have the trajectory loaded, open the Per-Frame menu and select Define script...
+
+Here you have a templeate of a script you can use. 
+In here you must specify the selection you want to represent. You can also specify transparency value if you wish.
 ```
-1. load the MD trajectory using the UCSF Chimera option (Tools-->MD ensemble/Analysis --> MD movie)
-2. in the MD movie widget, go to "per frame"
-3. copy the script:
+# Remove pre-existing TALAIA figures
 ~talaia
-sel (define your selection in chimera's language)
+# Make the selection you desire to represent
+sel <define your selection in chimera's language>
+# Call TALAIA on your current selection
 talaia spec sel
 ```
+
+![movie_example5_perframe_script](https://user-images.githubusercontent.com/63212606/235443498-5058f0e8-45cb-49f1-b610-baf46d8f8ae1.PNG)
+
+As the trajectory advances we can see how the apolar moiety of oxaliplatin tends to establish hydrophobic interactions with non-polar residues by exposing the hydrophobic core of the insulin.
+
+![test_frames3](https://user-images.githubusercontent.com/63212606/235450212-389f2179-d733-4354-921c-67f34bbf4f98.png)
+
+
+
+
+
+
+-----
+
+[1] Giuseppe Sciortino, José-Emilio Sánchez-Aparicio, Jaime Rodríguez-Guerra Pedregal, Eugenio Garribba, Jean-Didier Maréchal, Computational insight into the interaction of oxaliplatin with insulin, Metallomics, Volume 11, Issue 4, April 2019, Pages 765–773, https://doi.org/10.1039/c8mt00341f
